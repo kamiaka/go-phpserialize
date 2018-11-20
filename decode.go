@@ -10,7 +10,7 @@ import (
 	"github.com/kamiaka/go-phpserialize/php"
 )
 
-// Unmarshal returns the PHP unserialized Value of bs.
+// Unmarshal returns the PHP unserialized Value of data.
 func Unmarshal(data []byte) (*php.Value, error) {
 	s := newDecodeState(data)
 

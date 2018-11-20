@@ -19,7 +19,7 @@ func ExampleMarshal() {
 
 ### Unserialize Example
 
-### Array
+#### Array
 
 ```go
 func ExampleUnmarshal() {
