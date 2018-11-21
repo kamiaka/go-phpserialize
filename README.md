@@ -1,5 +1,6 @@
 go-phpserialize
 ===============
+[![GoDoc](https://godoc.org/github.com/kamiaka/go-phpserialize?status.svg)](https://godoc.org/github.com/kamiaka/go-phpserialize)
 
 Go PHP serialize library.
 
