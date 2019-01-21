@@ -119,7 +119,6 @@ func (d *decodeState) readNil() *php.Value {
 func (d *decodeState) readBool() *php.Value {
 	d.skipEq("b:")
 	bs := d.readBytes(';')
-	fmt.Printf("bytes: %s\n", bs)
 
 	var b bool
 	if bytes.Equal(bs, []byte{'1'}) {
