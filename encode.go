@@ -7,6 +7,8 @@ import (
 	"math"
 	"reflect"
 	"sort"
+
+	"github.com/kamiaka/go-phpserialize/php"
 )
 
 // Marshaler is the interface implemented by types that can marshal themselves
@@ -48,7 +50,7 @@ func (e *encodeState) marshal(i interface{}) (err error) {
 			}
 		}
 	}()
-	writeReflectValue(e, reflect.ValueOf(i))
+	writeInterface(e, i)
 	return nil
 }
 
@@ -192,12 +194,78 @@ func writeStruct(w io.Writer, v reflect.Value) {
 		f := t.Field(i)
 		var n string
 		if 'a' <= f.Name[0] && f.Name[0] <= 'z' {
-			n = fmt.Sprintf("\x00%s\x00_%s", name, f.Name)
+			n = fmt.Sprintf("\x00%s\x00%s", name, f.Name)
 		} else {
 			n = f.Name
 		}
 		writeString(w, n)
 		writeReflectValue(w, v.Field(i))
+	}
+	w.Write([]byte{'}'})
+}
+
+func writeInterface(w io.Writer, i interface{}) {
+	if v, ok := i.(Marshaler); ok {
+		bs, err := v.MarshalPHPSerialize()
+		if err != nil {
+			panic(serializeErr{err})
+		}
+		w.Write(bs)
+		return
+	}
+	if v, ok := i.(*php.Value); ok {
+		writePHPValue(w, v)
+		return
+	}
+	writeReflectValue(w, reflect.ValueOf(i))
+}
+
+func writePHPValue(w io.Writer, v *php.Value) {
+	if v.IsNil() {
+		writeNil(w)
+		return
+	}
+	switch v.Type() {
+	case php.TypeBool:
+		writeBool(w, v.Bool())
+	case php.TypeInt:
+		writeInt(w, v.Int())
+	case php.TypeFloat:
+		writeFloat(w, v.Float())
+	case php.TypeString:
+		writeString(w, v.String())
+	case php.TypeArray:
+		writePHPArray(w, v.Array())
+	case php.TypeObject:
+		writePHPObject(w, v.Object())
+	default:
+		panic(serializeErr{fmt.Errorf("invalid PHPValue Type: %v", v.Type())})
+	}
+}
+
+func writePHPArray(w io.Writer, arr []*php.ArrayElement) {
+	fmt.Fprintf(w, "a:%d:{", len(arr))
+	for _, val := range arr {
+		writePHPValue(w, val.Index)
+		writePHPValue(w, val.Value)
+	}
+	w.Write([]byte{'}'})
+}
+
+func writePHPObject(w io.Writer, obj *php.Obj) {
+	fmt.Fprintf(w, `O:%d:"%s":%d:{`, len(obj.Name), obj.Name, len(obj.Fields))
+	for _, f := range obj.Fields {
+		var name string
+		switch f.Visibility {
+		case php.VisibilityProtected:
+			name = fmt.Sprintf("*%s", f.Name)
+		case php.VisibilityPrivate:
+			name = fmt.Sprintf("\x00%s\x00%s", obj.Name, f.Name)
+		default: // public
+			name = f.Name
+		}
+		writeString(w, name)
+		writePHPValue(w, f.Value)
 	}
 	w.Write([]byte{'}'})
 }

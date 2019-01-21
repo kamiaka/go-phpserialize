@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	phpserialize "github.com/kamiaka/go-phpserialize"
+	"github.com/kamiaka/go-phpserialize/php"
 )
 
 func intPtr(i int) *int {
@@ -19,7 +20,7 @@ type testVal struct {
 	fourth int
 }
 
-func TestMarshal(t *testing.T) {
+func TestMarshals(t *testing.T) {
 	var nilPtr *int
 
 	cases := []struct {
@@ -89,8 +90,27 @@ func TestMarshal(t *testing.T) {
 				First:  "f\nval",
 				Second: 42,
 				Third:  true,
+				fourth: 3,
 			},
-			want: []byte(`O:7:"testVal":4:{s:5:"First";s:5:"f` + "\n" + `val";s:6:"Second";i:42;s:5:"Third";b:1;s:16:"` + "\x00testVal\x00_fourth" + `";i:0;}`),
+			want: []byte(`O:7:"testVal":4:{s:5:"First";s:5:"f` + "\n" + `val";s:6:"Second";i:42;s:5:"Third";b:1;s:15:"` + "\x00testVal\x00fourth" + `";i:3;}`),
+		},
+		{
+			val: php.Array([]*php.ArrayElement{
+				{Index: php.Int(0), Value: php.Int(1)},
+				{Index: php.String("a"), Value: php.String("aa")},
+			}...),
+			want: []byte(`a:2:{i:0;i:1;s:1:"a";s:2:"aa";}`),
+		},
+		{
+			val: php.Object(
+				"Foo",
+				[]*php.ObjField{
+					php.Field("a", php.Int(42), php.VisibilityPublic),
+					php.Field("b", php.String("aaa"), php.VisibilityProtected),
+					php.Field("c", php.Bool(true), php.VisibilityPrivate),
+				}...,
+			),
+			want: []byte(`O:3:"Foo":3:{s:1:"a";i:42;s:2:"*b";s:3:"aaa";s:6:"` + "\x00Foo\x00c" + `";b:1;}`),
 		},
 	}
 
@@ -100,7 +120,7 @@ func TestMarshal(t *testing.T) {
 			t.Fatalf("#%d: Marshal(...) returns error: %v", i, err)
 		}
 		if !bytes.Equal(got, tc.want) {
-			t.Errorf("#%d: Marshal(...) == %s, want: %s", i, got, tc.want)
+			t.Errorf("#%d: Marshal(...) == %s\nwant: %s", i, got, tc.want)
 		}
 	}
 }
