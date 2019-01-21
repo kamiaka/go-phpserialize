@@ -213,7 +213,7 @@ func (d *decodeState) readKey() *php.Value {
 	case php.TypeInt, php.TypeString:
 		return v
 	default:
-		d.error("invalid array key type: %s", v.Type)
+		d.error("invalid array key type: %v", v.Type())
 		return nil
 	}
 }
