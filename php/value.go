@@ -126,7 +126,7 @@ func (v *Value) Object() *Obj {
 
 // IsNil reports whether it's argument v is nil (PHP null)
 func (v *Value) IsNil() bool {
-	return v.t == TypeNull
+	return v == nil || v.t == TypeNull
 }
 
 // Interface returns v's current value as an interface{}.
